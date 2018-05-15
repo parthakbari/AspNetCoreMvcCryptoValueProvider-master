@@ -1,0 +1,105 @@
+﻿@model AspNetCoreMvcCryptoValueProvider.Models.Person
+@{
+    ViewData["Title"] = "Home Page";
+}
+<h3><a href="https://github.com/NandipMakwana/AspNetCoreMvcCryptoValueProvider" target="_blank">Source code on GitHub</a></h3>
+<h3>Blog post on <a href="http://www.dotnetexpertguide.com/2017/09/aspnet-core-mvc-value-provider-for.html?utm_source=github&utm_medium=referral" target="_blank">ASP.NET Core MVC Value Provider for Encrypted Route Parameter</a></h3>
+<hr />
+<h3>Example 1 - All parameters</h3>
+<h4>1. Mark action method with <i>CryptoValueProvider</i> attribute</h4>
+<pre>
+[CryptoValueProvider]
+public IActionResult Example1(int param1, string param2)
+{
+    ViewBag.param1 = param1;
+    ViewBag.param2 = param2;
+
+    return View();
+}
+</pre>
+<h4>2. Create parameter dictionary and encrypt it with <i>CryptoParamsProtector</i></h4>
+<pre>
+public class HomeController : Controller
+{
+    CryptoParamsProtector _protector;
+
+    public HomeController(CryptoParamsProtector protector)
+    {
+        _protector = protector;
+    }
+
+    public IActionResult Index()
+    {
+        var paramDictionary = new Dictionary<string, string>();
+        paramDictionary.Add("param1", 1234.ToString());
+        paramDictionary.Add("param2", "Hello World!");
+        ViewBag.encryptedRouteParam1 = _protector.EncryptParamDictionary(paramDictionary);
+
+        return View();
+    }
+}
+</pre>
+<h4>3. Use encrypted route parameter to generate link</h4>
+<pre>
+&#x3C;a asp-controller="demo" asp-action="example1" <span style="border-bottom:1px dotted;">asp-route-id="@Html.Raw("@ViewBag.encryptedRouteParam1")"</span>&#x3E;&#x3C;h4&#x3E;Example 1 Demo&#x3C;/h4&#x3E;&#x3C;/a&#x3E;
+</pre>
+<a asp-controller="demo" asp-action="example1" asp-route-id="@ViewBag.encryptedRouteParam1"><h3>Example 1 demo</h3></a>
+<hr />
+<h3>Example 2 - Crypto values combined with visible values</h3>
+<h4>1. Mark only encrypted parameters with <i>FromCrypto</i> attribute</h4>
+<pre>
+public IActionResult Example2([FromCrypto]int secretPersonId, [FromCrypto]string secretParam2, Person person)
+{
+    person.PersonId = secretPersonId;
+    _repository.UpdatePerson(person);
+
+    ViewBag.secretPersonId = secretPersonId;
+    ViewBag.secretParam2 = secretParam2;
+    ViewBag.person = person;
+
+    return View();
+}
+</pre>
+<h4>2. Create secret parameter dictionary and encrypt it with <i>CryptoParamsProtector</i></h4>
+<pre>
+public class HomeController : Controller
+{
+    CryptoParamsProtector _protector;
+
+    public HomeController(CryptoParamsProtector protector)
+    {
+        _protector = protector;
+    }
+
+    public IActionResult Index()
+    {
+        var person = new Person()
+        {
+            PersonId = 1234,
+            FirstName = "Nandip",
+            LastName = "Makwana"
+        };
+
+        var paramDictionary = new Dictionary<string, string>();
+        paramDictionary.Add("secretPersonId", person.PersonId.ToString());
+        paramDictionary.Add("secretParam2", 5678.ToString());
+        ViewBag.encryptedRouteParam2 = _protector.EncryptParamDictionary(paramDictionary);
+
+        return View(person);
+    }
+}
+</pre>
+<h4>3. Use encrypted route parameter with other request parameter for e.g. HTML form</h4>
+<pre>
+&#x3C;form asp-controller="demo" asp-action="example2" <span style="border-bottom:1px dotted;">asp-route-id="@Html.Raw("@ViewBag.encryptedRouteParam2")"</span> method="post"&#x3E;
+    &#x3C;input asp-for="FirstName" /&#x3E;
+    &#x3C;input asp-for="LastName" /&#x3E;
+    &#x3C;input type="submit" /&#x3E;
+&#x3C;/form&#x3E;
+</pre>
+<h3>Example 2 demo with HTML form</h3>
+<form asp-controller="demo" asp-action="example2" asp-route-id="@ViewBag.encryptedRouteParam2" method="post">
+    <input asp-for="FirstName" />
+    <input asp-for="LastName" />
+    <input type="submit" value="Test It!" />
+</form>
